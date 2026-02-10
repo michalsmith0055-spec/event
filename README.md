@@ -140,3 +140,16 @@ Configured via `.env`:
 - Multi-page profile storage per admin user.
 - Download failed-row report.
 - Add row-level inline edit persistence before submit.
+
+## 9) Troubleshooting
+
+### Error: `Failed opening required ... vendor/autoload.php`
+
+This means Composer dependencies are not installed yet. From your project root run:
+
+```bash
+composer install
+```
+
+If you are on WAMP/XAMPP, make sure the command runs in the same folder that contains `composer.json`.
+
