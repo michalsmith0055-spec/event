@@ -1,0 +1,17 @@
+version: '3.9'
+services:
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: app
+      POSTGRES_USER: app
+      POSTGRES_DB: affiliate_pin
+    ports: ["5432:5432"]
+  server:
+    build: ../server
+    env_file: ../.env.example
+    depends_on: [redis, db]
+    ports: ["4000:4000"]

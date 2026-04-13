@@ -1,155 +1,44 @@
-# Facebook Page Event Automation Tool (PHP + Excel + Google Sheets)
+# Affiliate Pin Publisher
 
-A production-ready starter app that lets you:
-- Authenticate with Facebook OAuth.
-- Upload an `.xlsx` sheet of events.
-- Validate and preview events.
-- Bulk-create Facebook Page events with retry and delay controls.
-- Track status/errors in **Google Sheets** (no MySQL required).
+Production-ready starter for importing Amazon affiliate inputs and publishing compliant Pinterest drafts.
 
-## 1) Architecture
+## Architecture summary
+- `client`: React + Vite + TypeScript + Tailwind admin UI.
+- `server`: Express + Prisma + BullMQ + Redis API.
+- `shared`: shared enums/types.
+- `docs`: API docs + compliance notes.
+- `samples`: CSV and mock product data.
+- `docker`: compose stack.
 
-- **Backend**: PHP 8.1+
-- **Frontend**: Bootstrap 5 + PHP templates
-- **Excel parser**: PhpSpreadsheet
-- **Facebook API**: Graph API (Page events endpoint)
-- **Persistent storage**: Google Sheets (events tab + logs tab)
+## Run locally
+1. `npm install`
+2. Copy `.env.example` to `.env`
+3. Set `DATABASE_PROVIDER=sqlite` for local SQLite usage.
+4. `npm run prisma:migrate -w server`
+5. `npm run seed -w server`
+6. `npm run dev`
 
-## 2) Google Sheets “Schema” (replacement for MySQL)
+## Demo mode
+Set `DEMO_MODE=true`. Use seeded account:
+- email: `demo@example.com`
+- password: `password123`
 
-Create one spreadsheet and share it with your service-account email.
+## Pinterest credentials
+Create a Pinterest app and set:
+- `PINTEREST_CLIENT_ID`
+- `PINTEREST_CLIENT_SECRET`
+- `PINTEREST_REDIRECT_URI`
 
-### Sheet: `events`
-Columns `A:R`:
-1. event_name
-2. event_description
-3. start_date
-4. start_time
-5. end_date
-6. end_time
-7. event_type
-8. venue_name
-9. city
-10. state
-11. country
-12. ticket_url
-13. category
-14. event_image_url
-15. status (Pending / Posted / Failed)
-16. facebook_event_id
-17. error_message
-18. created_at
+## Amazon provider integration
+Use `server/src/providers/amazonProvider.ts` and replace `MockAmazonProvider` with an approved Amazon provider integration (Creators API / approved Associates flow).
 
-### Sheet: `logs`
-Columns `A:C`:
-1. timestamp
-2. level
-3. message
+## Compliance guardrails
+- Do not scrape Amazon pages as source-of-truth.
+- Only use imported links or approved APIs.
+- Keep disclosure enabled unless explicit admin override is required.
 
-The app auto-creates missing tabs.
+## Scheduling
+BullMQ queue (`server/src/queue/publishQueue.ts`) handles immediate and delayed publish jobs with status transitions.
 
-## 3) Excel format expected
-
-Use these columns in row 1:
-- A: Event Name
-- B: Event Description
-- C: Start Date (YYYY-MM-DD)
-- D: Start Time (HH:MM AM/PM)
-- E: End Date
-- F: End Time
-- G: Event Type (In person / Virtual)
-- H: Venue Name
-- I: City
-- J: State
-- K: Country
-- L: Ticket URL
-- M: Category (Music & Audio)
-- N: Event Image URL
-
-Data starts from row 2.
-
-## 4) Project structure
-
-```text
-.
-├── config/
-│   └── bootstrap.php
-├── public/
-│   └── index.php
-├── src/
-│   ├── Controllers/
-│   │   └── DashboardController.php
-│   ├── Services/
-│   │   ├── EventValidator.php
-│   │   ├── ExcelParser.php
-│   │   ├── FacebookService.php
-│   │   └── GoogleSheetsRepository.php
-│   └── Utils/
-│       ├── Csrf.php
-│       └── Logger.php
-├── storage/logs/
-├── templates/
-│   └── dashboard.php
-├── .env.example
-├── composer.json
-└── README.md
-```
-
-## 5) Setup (step-by-step)
-
-1. Install dependencies:
-   ```bash
-   composer install
-   ```
-2. Configure environment:
-   ```bash
-   cp .env.example .env
-   ```
-3. Fill `.env`:
-   - Facebook app credentials + redirect URI.
-   - Google spreadsheet ID.
-   - Path to Google service account JSON key.
-4. In Facebook App settings:
-   - Add OAuth redirect URI: `http://localhost:8000/facebook-callback`
-   - Request permissions: `pages_manage_metadata`, `pages_read_engagement`, `pages_manage_events`
-5. Run local server:
-   ```bash
-   php -S 0.0.0.0:8000 -t public
-   ```
-6. Open browser: `http://localhost:8000`
-
-## 6) Security notes
-
-- CSRF protection on all POST routes.
-- Strict upload extension check (`.xlsx`).
-- Output escaping in templates.
-- Tokens stay server-side in session.
-- Keep `.env` and service-account JSON outside public web root.
-
-## 7) Automation controls
-
-Configured via `.env`:
-- `BATCH_SIZE` (default 10)
-- `API_DELAY_MS` (default 500ms)
-- `MAX_RETRIES` (default 2)
-
-## 8) Optional enhancements
-
-- CSV support (add parser path for `.csv`).
-- Scheduled submission using cron + queue worker.
-- Multi-page profile storage per admin user.
-- Download failed-row report.
-- Add row-level inline edit persistence before submit.
-
-## 9) Troubleshooting
-
-### Error: `Failed opening required ... vendor/autoload.php`
-
-This means Composer dependencies are not installed yet. From your project root run:
-
-```bash
-composer install
-```
-
-If you are on WAMP/XAMPP, make sure the command runs in the same folder that contains `composer.json`.
-
+## Deploy
+Use Docker compose in `docker/docker-compose.yml` or deploy services separately with managed Postgres + Redis.
