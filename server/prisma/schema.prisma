@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DATABASE_PROVIDER")
+  url      = env("DATABASE_URL")
+}
+
+enum DraftStatus {
+  imported
+  draft
+  approved
+  scheduled
+  publishing
+  published
+  failed
+  skipped_duplicate
+}
+
+enum CreativeMode {
+  USER_IMAGE
+  TEMPLATE_CREATIVE
+  EXTERNAL_IMAGE_URL
+}
+
+enum AmazonSourceMode {
+  IMPORT_ONLY
+  ASIN_ENRICHMENT
+  MANUAL_METADATA
+}
+
+model User {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  passwordHash         String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  pinterestConnections PinterestConnection[]
+  importBatches        ImportBatch[]
+  draftPins            DraftPin[]
+  settings             AppSetting?
+}
+
+model PinterestConnection {
+  id             String   @id @default(cuid())
+  userId         String
+  accountName    String
+  accessTokenEnc String
+  refreshTokenEnc String?
+  scope          String
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  boards         Board[]
+}
+
+model Board {
+  id             String   @id @default(cuid())
+  userId         String
+  pinterestConnectionId String?
+  pinterestBoardId String?
+  name           String
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  pinterestConnection PinterestConnection? @relation(fields: [pinterestConnectionId], references: [id])
+  drafts         DraftPin[]
+}
+
+model ImportBatch {
+  id             String   @id @default(cuid())
+  userId         String
+  sourceType     String
+  filename       String?
+  rowCount       Int      @default(0)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  products       ProductItem[]
+}
+
+model ProductItem {
+  id             String   @id @default(cuid())
+  importBatchId  String
+  sourceUrl      String?
+  asin           String?
+  affiliateUrl   String?
+  titleOverride  String?
+  descriptionOverride String?
+  boardName      String?
+  keywords       String?
+  imageUrl       String?
+  brand          String?
+  priceText      String?
+  notes          String?
+  rawInput       String?
+  createdAt      DateTime @default(now())
+  importBatch    ImportBatch @relation(fields: [importBatchId], references: [id])
+  draftPins      DraftPin[]
+}
+
+model DraftPin {
+  id             String   @id @default(cuid())
+  userId         String
+  productItemId  String
+  boardId        String?
+  status         DraftStatus @default(draft)
+  tone           String
+  variantType    String
+  title          String
+  description    String
+  disclosure     String
+  destinationLink String
+  keywords       String?
+  scheduleAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User @relation(fields: [userId], references: [id])
+  productItem    ProductItem @relation(fields: [productItemId], references: [id])
+  board          Board? @relation(fields: [boardId], references: [id])
+  creativeAsset  CreativeAsset?
+  publishJobs    PublishJob[]
+  publishLogs    PublishLog[]
+}
+
+model CreativeAsset {
+  id             String   @id @default(cuid())
+  draftPinId     String   @unique
+  mode           CreativeMode
+  pathOrUrl      String
+  templateName   String?
+  metadataJson   String?
+  createdAt      DateTime @default(now())
+  draftPin       DraftPin  @relation(fields: [draftPinId], references: [id])
+}
+
+model PublishJob {
+  id             String   @id @default(cuid())
+  draftPinId     String
+  queueJobId     String?
+  runAt          DateTime?
+  status         String
+  retries        Int      @default(0)
+  createdAt      DateTime @default(now())
+  draftPin       DraftPin @relation(fields: [draftPinId], references: [id])
+}
+
+model PublishLog {
+  id             String   @id @default(cuid())
+  draftPinId     String
+  level          String
+  message        String
+  metaJson       String?
+  createdAt      DateTime @default(now())
+  draftPin       DraftPin @relation(fields: [draftPinId], references: [id])
+}
+
+model AppSetting {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  timezone       String   @default("UTC")
+  defaultBoardId String?
+  defaultDisclosure String @default("#affiliate")
+  dailyPostCap   Int      @default(10)
+  minGapMinutes  Int      @default(60)
+  defaultCreativeTemplate String @default("clean-minimal")
+  amazonSourceMode AmazonSourceMode @default(IMPORT_ONLY)
+  utmTemplate    String?
+  duplicateCooldownDays Int @default(7)
+  quietHoursStart Int @default(0)
+  quietHoursEnd   Int @default(6)
+  aiToneDefaults String @default("deal")
+  requireDisclosure Boolean @default(true)
+  adminDisclosureOverride Boolean @default(false)
+  user           User @relation(fields: [userId], references: [id])
+}
+
+model ComplianceEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  draftPinId     String?
+  eventType      String
+  severity       String
+  message        String
+  createdAt      DateTime @default(now())
+}
+
+model AnalyticsSnapshot {
+  id             String   @id @default(cuid())
+  userId         String
+  boardId        String?
+  snapshotDate   DateTime
+  importsCount   Int @default(0)
+  draftsCount    Int @default(0)
+  publishedCount Int @default(0)
+  failedCount    Int @default(0)
+  outboundDomain String?
+}

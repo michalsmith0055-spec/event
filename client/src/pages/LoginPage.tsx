@@ -1,0 +1,3 @@
+import { useState } from 'react';
+import { api } from '../lib/api';
+export function LoginPage(){const [email,setEmail]=useState('demo@example.com');const [password,setPassword]=useState('password123');return <form className='max-w-md mx-auto mt-20 space-y-2' onSubmit={async(e)=>{e.preventDefault();await api.post('/auth/login',{email,password});location.href='/dashboard';}}><h1 className='text-2xl font-bold'>Affiliate Pin Publisher</h1><input className='border p-2 w-full' value={email} onChange={e=>setEmail(e.target.value)}/><input className='border p-2 w-full' type='password' value={password} onChange={e=>setPassword(e.target.value)}/><button className='bg-blue-600 text-white px-4 py-2'>Sign in</button></form>}
