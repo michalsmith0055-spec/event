@@ -16,6 +16,16 @@ $csrf = Csrf::token();
 <div class="container py-4">
     <h1 class="mb-3">Facebook Page Event Automation</h1>
 
+    <?php if (!empty($notices)): ?>
+        <div class="alert alert-info">
+            <ul class="mb-0">
+                <?php foreach ($notices as $notice): ?>
+                    <li><?= htmlspecialchars((string)$notice, ENT_QUOTES, 'UTF-8') ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+
     <?php if (!empty($errors)): ?>
         <div class="alert alert-danger">
             <ul class="mb-0">

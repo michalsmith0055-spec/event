@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\DashboardController;
+use App\Exceptions\AppException;
 use App\Services\EventValidator;
 use App\Services\ExcelParser;
 use App\Services\FacebookService;
@@ -11,30 +12,45 @@ use App\Utils\Logger;
 
 require_once __DIR__ . '/../config/bootstrap.php';
 
+$logger = new Logger();
+
 $controller = new DashboardController(
     new ExcelParser(),
     new EventValidator(),
     new FacebookService(),
     new GoogleSheetsRepository(),
-    new Logger()
+    $logger
 );
 
-$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$method = $_SERVER['REQUEST_METHOD'];
+$path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+$method = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
-if ($path === '/' && $method === 'GET') {
-    $controller->index();
-} elseif ($path === '/upload' && $method === 'POST') {
-    $controller->upload();
-} elseif ($path === '/facebook-login' && $method === 'GET') {
-    $controller->facebookLogin();
-} elseif ($path === '/facebook-callback' && $method === 'GET') {
-    $controller->facebookCallback();
-} elseif ($path === '/select-page' && $method === 'POST') {
-    $controller->selectPage();
-} elseif ($path === '/submit-events' && $method === 'POST') {
-    $controller->submitEvents();
-} else {
-    http_response_code(404);
-    echo 'Not Found';
+try {
+    if ($path === '/' && $method === 'GET') {
+        $controller->index();
+    } elseif ($path === '/upload' && $method === 'POST') {
+        $controller->upload();
+    } elseif ($path === '/facebook-login' && $method === 'GET') {
+        $controller->facebookLogin();
+    } elseif ($path === '/facebook-callback' && $method === 'GET') {
+        $controller->facebookCallback();
+    } elseif ($path === '/select-page' && $method === 'POST') {
+        $controller->selectPage();
+    } elseif ($path === '/submit-events' && $method === 'POST') {
+        $controller->submitEvents();
+    } else {
+        http_response_code(404);
+        echo 'Not Found';
+    }
+} catch (AppException $e) {
+    // Expected, user-actionable failures: report them on the dashboard instead of a 500.
+    $logger->error('Request failed.', ['path' => $path, 'error' => $e->getMessage()]);
+    $_SESSION['errors'] = [$e->getMessage()];
+
+    if (!headers_sent()) {
+        header('Location: /');
+        exit;
+    }
+
+    throw $e;
 }
