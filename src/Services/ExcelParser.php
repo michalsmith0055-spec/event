@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\ExcelParseException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 final class ExcelParser
@@ -13,8 +14,21 @@ final class ExcelParser
      */
     public function parse(string $filePath): array
     {
-        $spreadsheet = IOFactory::load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
+        if (!is_readable($filePath)) {
+            throw new ExcelParseException('The uploaded file could not be read from disk.');
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+        } catch (\Throwable $e) {
+            throw new ExcelParseException(
+                'The uploaded spreadsheet could not be read: ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+
         $highestRow = $sheet->getHighestDataRow();
 
         $events = [];

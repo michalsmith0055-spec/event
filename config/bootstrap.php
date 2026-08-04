@@ -52,14 +52,26 @@ require_once $autoloadPath;
 
 if (file_exists($basePath . '/.env') && class_exists(\Dotenv\Dotenv::class)) {
     $dotenv = \Dotenv\Dotenv::createImmutable($basePath);
-    $dotenv->safeLoad();
-}
-
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
+    $dotenv->load();
 }
 
 function env(string $key, ?string $default = null): ?string
 {
     return $_ENV[$key] ?? $_SERVER[$key] ?? $default;
+}
+
+function env_bool(string $key, bool $default = false): bool
+{
+    $value = env($key);
+    if ($value === null || $value === '') {
+        return $default;
+    }
+
+    return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? $default;
+}
+
+\App\Utils\ErrorHandler::register(new \App\Utils\Logger(), env_bool('APP_DEBUG'));
+
+if (session_status() !== PHP_SESSION_ACTIVE && !session_start()) {
+    throw new \RuntimeException('Unable to start the PHP session.');
 }
